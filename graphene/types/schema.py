@@ -404,7 +404,10 @@ class UnforgivingExecutionContext(ExecutionContext):
         error: GraphQLError,
         return_type,
     ) -> None:
-        raise error.original_error
+        if error.original_error:
+            raise error.original_error
+        else:
+            raise error
 
 
 class Schema:
