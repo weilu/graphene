@@ -149,7 +149,7 @@ class TestUnforgivingExecutionContext:
         )
         assert len(result.errors) == 1
         assert result.errors[0].message == "expected error"
-        assert result.data == {"expectedErrorField": None}
+        assert result.data == None
 
     def test_nested_graphql_error(self, schema):
         result = schema.execute(
@@ -158,7 +158,7 @@ class TestUnforgivingExecutionContext:
         )
         assert len(result.errors) == 1
         assert result.errors[0].message == "expected error"
-        assert result.data == {"nestedObject": {"expectedErrorField": None}}
+        assert result.data == None
 
     @mark.parametrize(
         "field,exception",
