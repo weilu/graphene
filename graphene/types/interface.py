@@ -1,15 +1,17 @@
+from typing import TYPE_CHECKING
+
 from .base import BaseOptions, BaseType
 from .field import Field
 from .utils import yank_fields_from_attrs
 
-# For static type checking with Mypy
-MYPY = False
-if MYPY:
-    from typing import Dict  # NOQA
+# For static type checking with type checker
+if TYPE_CHECKING:
+    from typing import Dict, Iterable, Type  # NOQA
 
 
 class InterfaceOptions(BaseOptions):
     fields = None  # type: Dict[str, Field]
+    interfaces = ()  # type: Iterable[Type[Interface]]
 
 
 class Interface(BaseType):
@@ -45,7 +47,7 @@ class Interface(BaseType):
     """
 
     @classmethod
-    def __init_subclass_with_meta__(cls, _meta=None, **options):
+    def __init_subclass_with_meta__(cls, _meta=None, interfaces=(), **options):
         if not _meta:
             _meta = InterfaceOptions(cls)
 
@@ -57,6 +59,9 @@ class Interface(BaseType):
             _meta.fields.update(fields)
         else:
             _meta.fields = fields
+
+        if not _meta.interfaces:
+            _meta.interfaces = interfaces
 
         super(Interface, cls).__init_subclass_with_meta__(_meta=_meta, **options)
 

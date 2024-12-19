@@ -41,12 +41,14 @@ And then execute it with:
 
     result = schema.execute('THE QUERY', middleware=[AuthorizationMiddleware()])
 
+If the ``middleware`` argument includes multiple middlewares,
+these middlewares will be executed bottom-up, i.e. from last to first.
 
 Functional example
 ------------------
 
 Middleware can also be defined as a function. Here we define a middleware that
-logs the time it takes to resolve each field
+logs the time it takes to resolve each field:
 
 .. code:: python
 

@@ -270,8 +270,8 @@ The following is an example for creating a DateTime scalar:
             return dt.isoformat()
 
         @staticmethod
-        def parse_literal(node):
-            if isinstance(node, ast.StringValue):
+        def parse_literal(node, _variables=None):
+            if isinstance(node, ast.StringValueNode):
                 return datetime.datetime.strptime(
                     node.value, "%Y-%m-%dT%H:%M:%S.%f")
 

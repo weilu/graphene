@@ -1,7 +1,6 @@
-from __future__ import absolute_import
-
 import json
 
+from graphql import Undefined
 from graphql.language.ast import StringValueNode
 
 from .scalars import Scalar
@@ -20,9 +19,13 @@ class JSONString(Scalar):
         return json.dumps(dt)
 
     @staticmethod
-    def parse_literal(node):
+    def parse_literal(node, _variables=None):
         if isinstance(node, StringValueNode):
-            return json.loads(node.value)
+            try:
+                return json.loads(node.value)
+            except Exception as error:
+                raise ValueError(f"Badly formed JSONString: {str(error)}")
+        return Undefined
 
     @staticmethod
     def parse_value(value):

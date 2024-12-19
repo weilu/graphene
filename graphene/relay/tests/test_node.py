@@ -1,14 +1,13 @@
 import re
-from graphql_relay import to_global_id
+from textwrap import dedent
 
-from graphene.tests.utils import dedent
+from graphql_relay import to_global_id
 
 from ...types import ObjectType, Schema, String
 from ..node import Node, is_node
 
 
 class SharedNodeFields:
-
     shared = String()
     something_else = String()
 
@@ -55,6 +54,7 @@ def test_node_good():
     assert "id" in MyNode._meta.fields
     assert is_node(MyNode)
     assert not is_node(object)
+    assert not is_node("node")
 
 
 def test_node_query():
@@ -171,8 +171,10 @@ def test_node_field_only_lazy_type_wrong():
 
 
 def test_str_schema():
-    assert str(schema) == dedent(
-        '''
+    assert (
+        str(schema).strip()
+        == dedent(
+            '''
         schema {
           query: RootQuery
         }
@@ -213,4 +215,5 @@ def test_str_schema():
           ): MyNode
         }
         '''
+        ).strip()
     )

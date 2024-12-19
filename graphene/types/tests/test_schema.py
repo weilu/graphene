@@ -1,8 +1,10 @@
+from textwrap import dedent
+
+from pytest import raises
+
 from graphql.type import GraphQLObjectType, GraphQLSchema
 from graphql import GraphQLError
-from pytest import mark, raises, fixture
-
-from graphene.tests.utils import dedent
+from pytest import fixture, mark, raises
 
 from ..field import Field
 from ..objecttype import ObjectType
@@ -44,8 +46,10 @@ def test_schema_get_type_error():
 
 def test_schema_str():
     schema = Schema(Query)
-    assert str(schema) == dedent(
-        """
+    assert (
+        str(schema).strip()
+        == dedent(
+            """
         type Query {
           inner: MyOtherType
         }
@@ -54,6 +58,7 @@ def test_schema_str():
           field: String
         }
         """
+        ).strip()
     )
 
 

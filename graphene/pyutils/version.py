@@ -1,5 +1,3 @@
-from __future__ import unicode_literals
-
 import datetime
 import os
 import subprocess
@@ -19,10 +17,7 @@ def get_version(version=None):
     sub = ""
     if version[3] == "alpha" and version[4] == 0:
         git_changeset = get_git_changeset()
-        if git_changeset:
-            sub = ".dev%s" % git_changeset
-        else:
-            sub = ".dev"
+        sub = ".dev%s" % git_changeset if git_changeset else ".dev"
     elif version[3] != "final":
         mapping = {"alpha": "a", "beta": "b", "rc": "rc"}
         sub = mapping[version[3]] + str(version[4])
@@ -76,6 +71,6 @@ def get_git_changeset():
         )
         timestamp = git_log.communicate()[0]
         timestamp = datetime.datetime.utcfromtimestamp(int(timestamp))
-    except:
+    except Exception:
         return None
     return timestamp.strftime("%Y%m%d%H%M%S")

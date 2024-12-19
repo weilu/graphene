@@ -1,5 +1,3 @@
-from __future__ import unicode_literals
-
 from graphql.language.ast import (
     BooleanValueNode,
     FloatValueNode,
@@ -29,7 +27,7 @@ class GenericScalar(Scalar):
     parse_value = identity
 
     @staticmethod
-    def parse_literal(ast):
+    def parse_literal(ast, _variables=None):
         if isinstance(ast, (StringValueNode, BooleanValueNode)):
             return ast.value
         elif isinstance(ast, IntValueNode):

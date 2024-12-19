@@ -26,8 +26,8 @@ def test_enum_construction():
     assert RGB._meta.description == "Description"
 
     values = RGB._meta.enum.__members__.values()
-    assert sorted([v.name for v in values]) == ["BLUE", "GREEN", "RED"]
-    assert sorted([v.description for v in values]) == [
+    assert sorted(v.name for v in values) == ["BLUE", "GREEN", "RED"]
+    assert sorted(v.description for v in values) == [
         "Description BLUE",
         "Description GREEN",
         "Description RED",
@@ -52,7 +52,7 @@ def test_enum_instance_construction():
     RGB = Enum("RGB", "RED,GREEN,BLUE")
 
     values = RGB._meta.enum.__members__.values()
-    assert sorted([v.name for v in values]) == ["BLUE", "GREEN", "RED"]
+    assert sorted(v.name for v in values) == ["BLUE", "GREEN", "RED"]
 
 
 def test_enum_from_builtin_enum():
@@ -63,6 +63,21 @@ def test_enum_from_builtin_enum():
     assert RGB.RED
     assert RGB.GREEN
     assert RGB.BLUE
+
+
+def test_enum_custom_description_in_constructor():
+    description = "An enumeration, but with a custom description"
+    RGB = Enum(
+        "RGB",
+        "RED,GREEN,BLUE",
+        description=description,
+    )
+    assert RGB._meta.description == description
+
+
+def test_enum_from_python3_enum_uses_default_builtin_doc():
+    RGB = Enum("RGB", "RED,GREEN,BLUE")
+    assert RGB._meta.description == "An enumeration."
 
 
 def test_enum_from_builtin_enum_accepts_lambda_description():
@@ -251,19 +266,22 @@ def test_enum_types():
 
     schema = Schema(query=Query)
 
-    assert str(schema) == dedent(
-        '''\
-        type Query {
-          color: Color!
-        }
+    assert (
+        str(schema).strip()
+        == dedent(
+            '''
+            type Query {
+              color: Color!
+            }
 
-        """Primary colors"""
-        enum Color {
-          RED
-          YELLOW
-          BLUE
-        }
-    '''
+            """Primary colors"""
+            enum Color {
+              RED
+              YELLOW
+              BLUE
+            }
+            '''
+        ).strip()
     )
 
 
@@ -325,6 +343,52 @@ def test_enum_resolver_compat():
     assert results.data["colorByName"] == Color.RED.name
 
 
+def test_enum_with_name():
+    from enum import Enum as PyEnum
+
+    class Color(PyEnum):
+        RED = 1
+        YELLOW = 2
+        BLUE = 3
+
+    GColor = Enum.from_enum(Color, description="original colors")
+    UniqueGColor = Enum.from_enum(
+        Color, name="UniqueColor", description="unique colors"
+    )
+
+    class Query(ObjectType):
+        color = GColor(required=True)
+        unique_color = UniqueGColor(required=True)
+
+    schema = Schema(query=Query)
+
+    assert (
+        str(schema).strip()
+        == dedent(
+            '''
+            type Query {
+              color: Color!
+              uniqueColor: UniqueColor!
+            }
+
+            """original colors"""
+            enum Color {
+              RED
+              YELLOW
+              BLUE
+            }
+
+            """unique colors"""
+            enum UniqueColor {
+              RED
+              YELLOW
+              BLUE
+            }
+            '''
+        ).strip()
+    )
+
+
 def test_enum_resolver_invalid():
     from enum import Enum as PyEnum
 
@@ -345,10 +409,7 @@ def test_enum_resolver_invalid():
 
     results = schema.execute("query { color }")
     assert results.errors
-    assert (
-        results.errors[0].message
-        == "Expected a value of type 'Color' but received: 'BLACK'"
-    )
+    assert results.errors[0].message == "Enum 'Color' cannot represent value: 'BLACK'"
 
 
 def test_field_enum_argument():
@@ -460,14 +521,95 @@ def test_mutation_enum_input_type():
 
     schema = Schema(query=Query, mutation=MyMutation)
     result = schema.execute(
-        """ mutation MyMutation {
-        createPaint(colorInput: { color: RED }) {
-            color
+        """
+        mutation MyMutation {
+            createPaint(colorInput: { color: RED }) {
+                color
+            }
         }
-    }
-    """,
+        """
     )
     assert not result.errors
     assert result.data == {"createPaint": {"color": "RED"}}
 
     assert color_input_value == RGB.RED
+
+
+def test_hashable_enum():
+    class RGB(Enum):
+        """Available colors"""
+
+        RED = 1
+        GREEN = 2
+        BLUE = 3
+
+    color_map = {RGB.RED: "a", RGB.BLUE: "b", 1: "c"}
+
+    assert color_map[RGB.RED] == "a"
+    assert color_map[RGB.BLUE] == "b"
+    assert color_map[1] == "c"
+
+
+def test_hashable_instance_creation_enum():
+    Episode = Enum("Episode", [("NEWHOPE", 4), ("EMPIRE", 5), ("JEDI", 6)])
+
+    trilogy_map = {Episode.NEWHOPE: "better", Episode.EMPIRE: "best", 5: "foo"}
+
+    assert trilogy_map[Episode.NEWHOPE] == "better"
+    assert trilogy_map[Episode.EMPIRE] == "best"
+    assert trilogy_map[5] == "foo"
+
+
+def test_enum_iteration():
+    class TestEnum(Enum):
+        FIRST = 1
+        SECOND = 2
+
+    result = []
+    expected_values = ["FIRST", "SECOND"]
+    for c in TestEnum:
+        result.append(c.name)
+    assert result == expected_values
+
+
+def test_iterable_instance_creation_enum():
+    TestEnum = Enum("TestEnum", [("FIRST", 1), ("SECOND", 2)])
+
+    result = []
+    expected_values = ["FIRST", "SECOND"]
+    for c in TestEnum:
+        result.append(c.name)
+    assert result == expected_values
+
+
+# https://github.com/graphql-python/graphene/issues/1321
+def test_enum_description_member_not_interpreted_as_property():
+    class RGB(Enum):
+        """Description"""
+
+        red = "red"
+        green = "green"
+        blue = "blue"
+        description = "description"
+        deprecation_reason = "deprecation_reason"
+
+    class Query(ObjectType):
+        color = RGB()
+
+        def resolve_color(_, info):
+            return RGB.description
+
+    values = RGB._meta.enum.__members__.values()
+    assert sorted(v.name for v in values) == [
+        "blue",
+        "deprecation_reason",
+        "description",
+        "green",
+        "red",
+    ]
+
+    schema = Schema(query=Query)
+
+    results = schema.execute("query { color }")
+    assert not results.errors
+    assert results.data["color"] == RGB.description.name

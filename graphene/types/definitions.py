@@ -7,7 +7,6 @@ from graphql import (
     GraphQLObjectType,
     GraphQLScalarType,
     GraphQLUnionType,
-    Undefined,
 )
 
 
@@ -20,6 +19,11 @@ class GrapheneGraphQLType:
     def __init__(self, *args, **kwargs):
         self.graphene_type = kwargs.pop("graphene_type")
         super(GrapheneGraphQLType, self).__init__(*args, **kwargs)
+
+    def __copy__(self):
+        result = GrapheneGraphQLType(graphene_type=self.graphene_type)
+        result.__dict__.update(self.__dict__)
+        return result
 
 
 class GrapheneInterfaceType(GrapheneGraphQLType, GraphQLInterfaceType):
@@ -50,7 +54,7 @@ class GrapheneEnumType(GrapheneGraphQLType, GraphQLEnumType):
                 try:
                     value = enum[value]
                 except KeyError:
-                    return Undefined
+                    pass
         return super(GrapheneEnumType, self).serialize(value)
 
 

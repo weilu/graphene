@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 from ..utils.deprecated import warn_deprecation
 from ..utils.get_unbound_function import get_unbound_function
 from ..utils.props import props
@@ -6,9 +8,8 @@ from .objecttype import ObjectType, ObjectTypeOptions
 from .utils import yank_fields_from_attrs
 from .interface import Interface
 
-# For static type checking with Mypy
-MYPY = False
-if MYPY:
+# For static type checking with type checker
+if TYPE_CHECKING:
     from .argument import Argument  # NOQA
     from typing import Dict, Type, Callable, Iterable  # NOQA
 
@@ -29,21 +30,21 @@ class Mutation(ObjectType):
 
     .. code:: python
 
-        from graphene import Mutation, ObjectType, String, Boolean, Field
+        import graphene
 
-        class CreatePerson(Mutation):
+        class CreatePerson(graphene.Mutation):
             class Arguments:
-                name = String()
+                name = graphene.String()
 
-            ok = Boolean()
-            person = Field(Person)
+            ok = graphene.Boolean()
+            person = graphene.Field(Person)
 
             def mutate(parent, info, name):
                 person = Person(name=name)
                 ok = True
                 return CreatePerson(person=person, ok=ok)
 
-        class Mutation(ObjectType):
+        class Mutation(graphene.ObjectType):
             create_person = CreatePerson.Field()
 
     Meta class options (optional):
@@ -76,7 +77,6 @@ class Mutation(ObjectType):
     ):
         if not _meta:
             _meta = MutationOptions(cls)
-
         output = output or getattr(cls, "Output", None)
         fields = {}
 
@@ -85,43 +85,32 @@ class Mutation(ObjectType):
                 interface, Interface
             ), f'All interfaces of {cls.__name__} must be a subclass of Interface. Received "{interface}".'
             fields.update(interface._meta.fields)
-
         if not output:
             # If output is defined, we don't need to get the fields
             fields = {}
             for base in reversed(cls.__mro__):
                 fields.update(yank_fields_from_attrs(base.__dict__, _as=Field))
             output = cls
-
         if not arguments:
             input_class = getattr(cls, "Arguments", None)
             if not input_class:
                 input_class = getattr(cls, "Input", None)
                 if input_class:
                     warn_deprecation(
-                        (
-                            f"Please use {cls.__name__}.Arguments instead of {cls.__name__}.Input."
-                            " Input is now only used in ClientMutationID.\n"
-                            "Read more:"
-                            " https://github.com/graphql-python/graphene/blob/v2.0.0/UPGRADE-v2.0.md#mutation-input"
-                        )
+                        f"Please use {cls.__name__}.Arguments instead of {cls.__name__}.Input."
+                        " Input is now only used in ClientMutationID.\n"
+                        "Read more:"
+                        " https://github.com/graphql-python/graphene/blob/v2.0.0/UPGRADE-v2.0.md#mutation-input"
                     )
-
-            if input_class:
-                arguments = props(input_class)
-            else:
-                arguments = {}
-
+            arguments = props(input_class) if input_class else {}
         if not resolver:
             mutate = getattr(cls, "mutate", None)
             assert mutate, "All mutations must define a mutate method in it"
             resolver = get_unbound_function(mutate)
-
         if _meta.fields:
             _meta.fields.update(fields)
         else:
             _meta.fields = fields
-
         _meta.interfaces = interfaces
         _meta.output = output
         _meta.resolver = resolver
@@ -133,7 +122,7 @@ class Mutation(ObjectType):
     def Field(
         cls, name=None, description=None, deprecation_reason=None, required=False
     ):
-        """ Mount instance of mutation Field. """
+        """Mount instance of mutation Field."""
         return Field(
             cls._meta.output,
             args=cls._meta.arguments,
